@@ -63,9 +63,14 @@ version (Win32_release) {
 public int boot(string[] args) {
   screen = new Screen;
   input = new RecordablePad;
-  try {
-    input.openJoystick();
-  } catch (Exception e) {}
+  // PortMaster: gptokeyb2 turns the pad into keys, and raw joystick button
+  // numbers differ between handhelds, so the joystick is not read directly.
+  version (PORTMASTER) {
+  } else {
+    try {
+      input.openJoystick();
+    } catch (Exception e) {}
+  }
   gameManager = new GameManager;
   prefManager = new PrefManager;
   mainLoop = new MainLoop(screen, input, gameManager, prefManager);
