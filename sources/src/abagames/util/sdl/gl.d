@@ -388,12 +388,30 @@ private void updateMVP() {
   mvpDirty = false;
 }
 
+// These run for every vertex of every frame on the device's CPU: inlined, results computed
+// before they are stored (the compiler cannot know that o is not the matrix), no default
+// initialisation of locals.
+pragma(inline, true)
 private void toClip(ref const(float[3]) p, ref float[4] o) {
-  float x = p[0], y = p[1], z = p[2];
-  o[0] = mvp[0] * x + mvp[4] * y + mvp[8] * z + mvp[12];
-  o[1] = mvp[1] * x + mvp[5] * y + mvp[9] * z + mvp[13];
-  o[2] = mvp[2] * x + mvp[6] * y + mvp[10] * z + mvp[14];
-  o[3] = mvp[3] * x + mvp[7] * y + mvp[11] * z + mvp[15];
+  const float x = p[0], y = p[1], z = p[2];
+  const float r0 = mvp[0] * x + mvp[4] * y + mvp[8] * z + mvp[12];
+  const float r1 = mvp[1] * x + mvp[5] * y + mvp[9] * z + mvp[13];
+  const float r2 = mvp[2] * x + mvp[6] * y + mvp[10] * z + mvp[14];
+  const float r3 = mvp[3] * x + mvp[7] * y + mvp[11] * z + mvp[15];
+  o[0] = r0;
+  o[1] = r1;
+  o[2] = r2;
+  o[3] = r3;
+}
+
+// The sides of the view volume a clip-space point is beyond, one bit each; gx and gy widen the
+// volume sideways (1 = not at all). A primitive whose vertices are all beyond the same side
+// cannot be seen, and the GPU would clip it away: it is left out of the frame's array.
+pragma(inline, true)
+private uint sidesBeyond(ref const(float[4]) p, float gx, float gy) {
+  const float wx = p[3] * gx, wy = p[3] * gy, w = p[3];
+  return (p[0] < -wx ? 1 : 0) | (p[0] > wx ? 2 : 0) | (p[1] < -wy ? 4 : 0) | (p[1] > wy ? 8 : 0) |
+         (p[2] < -w ? 16 : 0) | (p[2] > w ? 32 : 0);
 }
 
 // 0: blending off, 1: GL_SRC_ALPHA/GL_ONE_MINUS_SRC_ALPHA, 2: GL_SRC_ALPHA/GL_ONE.
@@ -407,6 +425,7 @@ private int blendMode() {
   throw new Exception("unsupported glBlendFunc " ~ to!string(blendSrc) ~ " " ~ to!string(blendDst));
 }
 
+pragma(inline, true)
 private void premultiply(int mode, ref const(float[4]) c, ref float[4] o) {
   if (mode == 0) {
     o[0] = c[0];
@@ -448,6 +467,8 @@ private void addTriangle(int mode, ref const(float[3]) p0, ref const(float[4]) c
   toClip(p0, o[0].p);
   toClip(p1, o[1].p);
   toClip(p2, o[2].p);
+  if (sidesBeyond(o[0].p, 1, 1) & sidesBeyond(o[1].p, 1, 1) & sidesBeyond(o[2].p, 1, 1))
+    return;
   if (cullEnabled && backFacing(o[0].p, o[1].p, o[2].p))
     return;
   premultiply(mode, c0, o[0].c);
@@ -460,9 +481,13 @@ private void addTriangle(int mode, ref const(float[3]) p0, ref const(float[4]) c
 // its minor axis in window space, which is how GL describes a line of that width.
 private void addLine(int mode, ref const(float[3]) p0, ref const(float[4]) c0,
                      ref const(float[3]) p1, ref const(float[4]) c1) {
-  float[4] a, b, ca, cb;
+  float[4] a = void, b = void, ca = void, cb = void;
   toClip(p0, a);
   toClip(p1, b);
+  // The quad reaches lineWidth / 2 pixels beyond the line; twice that is allowed for.
+  const float gx = 1 + 2 * lineWidth / viewW, gy = 1 + 2 * lineWidth / viewH;
+  if (sidesBeyond(a, gx, gy) & sidesBeyond(b, gx, gy))
+    return;
   premultiply(mode, c0, ca);
   premultiply(mode, c1, cb);
   float da = a[2] + a[3], db = b[2] + b[3];
@@ -470,7 +495,7 @@ private void addLine(int mode, ref const(float[3]) p0, ref const(float[4]) c0,
     return;
   if (da < 0 || db < 0) {
     float t = da / (da - db);
-    float[4] m, cm;
+    float[4] m = void, cm = void;
     for (int i = 0; i < 4; i++) {
       m[i] = a[i] + (b[i] - a[i]) * t;
       cm[i] = ca[i] + (cb[i] - ca[i]) * t;
@@ -507,12 +532,16 @@ private void addLine(int mode, ref const(float[3]) p0, ref const(float[4]) c0,
   outN += 6;
 }
 
+pragma(inline, true)
 private void setOut(ref Out o, ref const(float[4]) p, ref const(float[4]) c, float ox, float oy) {
   o.p[0] = p[0] + ox * p[3];
   o.p[1] = p[1] + oy * p[3];
   o.p[2] = p[2];
   o.p[3] = p[3];
-  o.c = c;
+  o.c[0] = c[0];
+  o.c[1] = c[1];
+  o.c[2] = c[2];
+  o.c[3] = c[3];
 }
 
 // Vertices of GL_LINES or GL_TRIANGLES as the game gave them, appended to the frame's array.
