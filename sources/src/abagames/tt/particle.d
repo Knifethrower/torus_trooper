@@ -11,6 +11,7 @@ private import abagames.util.actor;
 private import abagames.util.vector;
 private import abagames.util.rand;
 private import abagames.util.sdl.luminous;
+private import abagames.util.sdl.vertexbatch;
 private import abagames.tt.tunnel;
 private import abagames.tt.ship;
 private import abagames.tt.screen;
@@ -27,6 +28,8 @@ public class Particle: LuminousActor {
   static const float GRAVITY = 0.02;
   static const float SIZE = 0.3;
   static Rand rand;
+  // Sparks and stars of all particles are collected here and drawn by ParticlePool.draw.
+  static VertexBatch sparkBatch, starBatch;
   Tunnel tunnel;
   Ship ship;
   Vector3 pos;
@@ -44,6 +47,28 @@ public class Particle: LuminousActor {
 
   public static void initRand() {
     rand = new Rand;
+    sparkBatch = new VertexBatch(GL_TRIANGLES, 4096);
+    starBatch = new VertexBatch(GL_LINES, 1024);
+  }
+
+  public static void flushBatches() {
+    sparkBatch.flush();
+    starBatch.flush();
+  }
+
+  // Triangle fan of the center and the 4 corners of a square (the first corner repeated at
+  // the end) as 4 triangles.
+  private static void addSparkFan(Vector3 c, float r, float g, float b, float a,
+                                  float x, float y, float z) {
+    static const float[2][5] corner =
+      [[-SIZE, -SIZE], [SIZE, -SIZE], [SIZE, SIZE], [-SIZE, SIZE], [-SIZE, -SIZE]];
+    for (int i = 0; i < 4; i++) {
+      sparkBatch.color(r, g, b, a);
+      sparkBatch.vertex(c);
+      sparkBatch.color(r, g, b, 0);
+      sparkBatch.vertex(x + corner[i][0], y + corner[i][1], z);
+      sparkBatch.vertex(x + corner[i + 1][0], y + corner[i + 1][1], z);
+    }
   }
 
   public static void setRandSeed(long seed) {
@@ -185,37 +210,16 @@ public class Particle: LuminousActor {
   }
 
   private void drawSpark() {
-    glBegin(GL_TRIANGLE_FAN);
-    Screen.setColor(r, g, b, 0.5);
-    Screen.glVertex(psp);
-    Screen.setColor(r, g, b, 0);
-    glVertex3f(sp.x - SIZE, sp.y - SIZE, sp.z);
-    glVertex3f(sp.x + SIZE, sp.y - SIZE, sp.z);
-    glVertex3f(sp.x + SIZE, sp.y + SIZE, sp.z);
-    glVertex3f(sp.x - SIZE, sp.y + SIZE, sp.z);
-    glVertex3f(sp.x - SIZE, sp.y - SIZE, sp.z);
-    glEnd();
-    if (inCourse) {
-      glBegin(GL_TRIANGLE_FAN);
-      Screen.setColor(r, g, b, 0.2);
-      Screen.glVertex(rpsp);
-      Screen.setColor(r, g, b, 0);
-      glVertex3f(rsp.x - SIZE, rsp.y - SIZE, sp.z);
-      glVertex3f(rsp.x + SIZE, rsp.y - SIZE, sp.z);
-      glVertex3f(rsp.x + SIZE, rsp.y + SIZE, sp.z);
-      glVertex3f(rsp.x - SIZE, rsp.y + SIZE, sp.z);
-      glVertex3f(rsp.x - SIZE, rsp.y - SIZE, sp.z);
-      glEnd();
-    }
+    addSparkFan(psp, r, g, b, 0.5, sp.x, sp.y, sp.z);
+    if (inCourse)
+      addSparkFan(rpsp, r, g, b, 0.2, rsp.x, rsp.y, sp.z);
   }
 
   private void drawStar() {
-    glBegin(GL_LINES);
-    Screen.setColor(r, g, b, 1);
-    Screen.glVertex(psp);
-    Screen.setColor(r, g, b, 0.2);
-    Screen.glVertex(sp);
-    glEnd();
+    starBatch.color(r, g, b, 1);
+    starBatch.vertex(psp);
+    starBatch.color(r, g, b, 0.2);
+    starBatch.vertex(sp);
   }
 
   private void drawFragment() {
@@ -258,5 +262,12 @@ public class Particle: LuminousActor {
 public class ParticlePool: LuminousActorPool!(Particle) {
   public this(int n, Object[] args) {
     super(n, args);
+  }
+
+  // Particles are drawn with additive blending (GL_SRC_ALPHA, GL_ONE), so drawing the sparks and
+  // stars together after the fragments gives the same picture as drawing them one by one.
+  public override void draw() {
+    super.draw();
+    Particle.flushBatches();
   }
 }

@@ -10,6 +10,7 @@ private import std.math;
 private import abagames.util.vector;
 private import abagames.util.rand;
 private import abagames.util.sdl.displaylist;
+private import abagames.util.sdl.vertexbatch;
 private import abagames.tt.ship;
 private import abagames.tt.enemy;
 private import abagames.tt.screen;
@@ -423,6 +424,10 @@ public class Slice {
   static bool darkLine;
   static float darkLineRatio;
  private:
+  // Each slice is drawn with one GL_LINES and one GL_TRIANGLES batch (the lines first, as
+  // they are never covered by the slice's own panels, which are inset in their quads).
+  static VertexBatch lineBatch, polyBatch;
+  static Vector3[4] polyPoints;
   SliceState _state;
   float _d1, _d2;
   float _pointFrom;
@@ -430,7 +435,6 @@ public class Slice {
   float pointRatio;
   Vector3[] pointPos;
   Vector3 radOfs;
-  Vector3 polyPoint;
   float _depth;
 
   public this() {
@@ -440,7 +444,12 @@ public class Slice {
     foreach (ref Vector3 pp; pointPos)
       pp = new Vector3;
     radOfs = new Vector3;
-    polyPoint = new Vector3;
+    if (!lineBatch) {
+      lineBatch = new VertexBatch(GL_LINES, 512);
+      polyBatch = new VertexBatch(GL_TRIANGLES, 512);
+      foreach (ref Vector3 pp; polyPoints)
+        pp = new Vector3;
+    }
   }
 
   public void setFirst(float pf, SliceState state, float dpt) {
@@ -484,26 +493,25 @@ public class Slice {
       if (!isFirst) {
         int psPi = cast(int) (pi * prevSlice.state.pointNum / _state.pointNum);
         int psPrevPi = cast(int) (prevPi * prevSlice.state.pointNum / _state.pointNum);
-        Screen.setColor(lineR * lineBn, lineG * lineBn, lineB * lineBn);
-        glBegin(GL_LINE_STRIP);
-        Screen.glVertex(pointPos[cast(int) pi]);
-        Screen.glVertex(prevSlice.pointPos[psPi]);
-        Screen.glVertex(prevSlice.pointPos[psPrevPi]);
-        glEnd();
+        // Line strip of 3 points as 2 line segments.
+        lineBatch.color(lineR * lineBn, lineG * lineBn, lineB * lineBn);
+        lineBatch.vertex(pointPos[cast(int) pi]);
+        lineBatch.vertex(prevSlice.pointPos[psPi]);
+        lineBatch.vertex(prevSlice.pointPos[psPi]);
+        lineBatch.vertex(prevSlice.pointPos[psPrevPi]);
         if (polyBn > 0) {
           if (roundSlice || (!polyFirst && width > 0)) {
-            Screen.setColor(polyR, polyG, polyB, polyBn);
-            glBegin(GL_TRIANGLE_FAN);
-            polyPoint.blend(pointPos[cast(int) prevPi], prevSlice.pointPos[psPi], 0.9);
-            Screen.glVertex(polyPoint);
-            polyPoint.blend(pointPos[cast(int) pi], prevSlice.pointPos[psPrevPi], 0.9);
-            Screen.glVertex(polyPoint);
-            Screen.setColor(polyR, polyG, polyB, polyBn / 2);
-            polyPoint.blend(pointPos[cast(int) prevPi], prevSlice.pointPos[psPi], 0.1);
-            Screen.glVertex(polyPoint);
-            polyPoint.blend(pointPos[cast(int) pi], prevSlice.pointPos[psPrevPi], 0.1);
-            Screen.glVertex(polyPoint);
-            glEnd();
+            // Triangle fan of 4 points as 2 triangles.
+            polyPoints[0].blend(pointPos[cast(int) prevPi], prevSlice.pointPos[psPi], 0.9);
+            polyPoints[1].blend(pointPos[cast(int) pi], prevSlice.pointPos[psPrevPi], 0.9);
+            polyPoints[2].blend(pointPos[cast(int) prevPi], prevSlice.pointPos[psPi], 0.1);
+            polyPoints[3].blend(pointPos[cast(int) pi], prevSlice.pointPos[psPrevPi], 0.1);
+            // Points 0 and 1 have polyBn as their alpha, points 2 and 3 polyBn / 2.
+            static const int[6] fanIdx = [0, 1, 2, 0, 2, 3];
+            foreach (int fi; fanIdx) {
+              polyBatch.color(polyR, polyG, polyB, fi < 2 ? polyBn : polyBn / 2);
+              polyBatch.vertex(polyPoints[fi]);
+            }
           } else {
             polyFirst = false;
           }
@@ -522,16 +530,16 @@ public class Slice {
     if (_state.courseWidth < _state.pointNum) {
       pi = _pointFrom;
       int psPi = cast(int) (pi * prevSlice.state.pointNum / _state.pointNum);
-      Screen.setColor(lineBn / 3 * 2, lineBn / 3 * 2, lineBn);
-      glBegin(GL_LINE_STRIP);
-      Screen.glVertex(pointPos[cast(int) pi]);
-      Screen.glVertex(prevSlice.pointPos[psPi]);
-      glEnd();
+      lineBatch.color(lineBn / 3 * 2, lineBn / 3 * 2, lineBn);
+      lineBatch.vertex(pointPos[cast(int) pi]);
+      lineBatch.vertex(prevSlice.pointPos[psPi]);
     }
     if (!roundSlice && lightBn > 0.2f) {
       drawSideLight(getLeftEdgeDeg() - 0.07f, lightBn);
       drawSideLight(getRightEdgeDeg() + 0.07f, lightBn);
     }
+    lineBatch.flush();
+    polyBatch.flush();
     if (_state.ring)
       if (lightBn > 0.2f)
         _state.ring.draw(lightBn * 0.7f, tunnel);
@@ -561,23 +569,23 @@ public class Slice {
     radOfs.rollY(_d1);
     radOfs.rollX(_d2);
     radOfs += _centerPos;
-    Screen.setColor(1 * lightBn, 1 * lightBn, 0.6 * lightBn);
-    glBegin(GL_LINE_LOOP);
-    glVertex3f(radOfs.x - 0.5, radOfs.y - 0.5, radOfs.z);
-    glVertex3f(radOfs.x + 0.5, radOfs.y - 0.5, radOfs.z);
-    glVertex3f(radOfs.x + 0.5, radOfs.y + 0.5, radOfs.z);
-    glVertex3f(radOfs.x - 0.5, radOfs.y + 0.5, radOfs.z);
-    glEnd();
-    glBegin(GL_TRIANGLE_FAN);
-    Screen.setColor(0.5 * lightBn, 0.5 * lightBn, 0.3 * lightBn);
-    glVertex3f(radOfs.x, radOfs.y, radOfs.z);
-    Screen.setColor(0.9 * lightBn, 0.9 * lightBn, 0.6 * lightBn);
-    glVertex3f(radOfs.x - 0.5, radOfs.y - 0.5, radOfs.z);
-    glVertex3f(radOfs.x - 0.5, radOfs.y + 0.5, radOfs.z);
-    glVertex3f(radOfs.x + 0.5, radOfs.y + 0.5, radOfs.z);
-    glVertex3f(radOfs.x + 0.5, radOfs.y - 0.5, radOfs.z);
-    glVertex3f(radOfs.x - 0.5, radOfs.y - 0.5, radOfs.z);
-    glEnd();
+    // Line loop of 4 corners as 4 line segments, triangle fan around the center as 4 triangles.
+    // The lights sit outside the course, clear of the slice's panels.
+    static const float[2][5] corner = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]];
+    lineBatch.color(1 * lightBn, 1 * lightBn, 0.6 * lightBn);
+    for (int i = 0; i < 4; i++) {
+      lineBatch.vertex(radOfs.x + corner[i][0], radOfs.y + corner[i][1], radOfs.z);
+      lineBatch.vertex(radOfs.x + corner[i + 1][0], radOfs.y + corner[i + 1][1], radOfs.z);
+    }
+    // Fan order of the original: center, then (-,-), (-,+), (+,+), (+,-), (-,-).
+    static const float[2][5] fan = [[-0.5, -0.5], [-0.5, 0.5], [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]];
+    for (int i = 0; i < 4; i++) {
+      polyBatch.color(0.5 * lightBn, 0.5 * lightBn, 0.3 * lightBn);
+      polyBatch.vertex(radOfs.x, radOfs.y, radOfs.z);
+      polyBatch.color(0.9 * lightBn, 0.9 * lightBn, 0.6 * lightBn);
+      polyBatch.vertex(radOfs.x + fan[i][0], radOfs.y + fan[i][1], radOfs.z);
+      polyBatch.vertex(radOfs.x + fan[i + 1][0], radOfs.y + fan[i + 1][1], radOfs.z);
+    }
   }
 
   public bool isNearlyRound() {
