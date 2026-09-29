@@ -79,10 +79,21 @@ public class Screen: Screen3D {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
-    glOrtho(0, 640, 480, 0, -1, 1);
+    glOrtho(-marginX, 640 + marginX, 480 + marginY, -marginY, -1, 1);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
+  }
+
+  // The status display is laid out for 640x480. On other screen shapes its parts keep their
+  // place relative to a screen edge: h = -1 left, 1 right, v = -1 top, 1 bottom, 0 the middle.
+  public static void anchor(int h, int v) {
+    glPushMatrix();
+    glTranslatef(h * marginX, v * marginY, 0);
+  }
+
+  public static void unanchor() {
+    glPopMatrix();
   }
 
   public static void viewPerspective() {

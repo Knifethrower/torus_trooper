@@ -450,17 +450,23 @@ public class InGameState: GameState {
 
   public override void drawFront() {
     ship.drawFront();
+    Screen.anchor(1, -1);
     Letter.drawNum(score, 610, 0, 15);
     Letter.drawString("/", 510, 40, 7);
     Letter.drawNum(nextExtend - score, 615, 40, 7);
+    Screen.unanchor();
+    Screen.anchor(-1, -1);
     if (time > BEEP_START_TIME)
       Letter.drawTime(time, 220, 24, 15);
     else
       Letter.drawTime(time, 220, 24, 15, 1);
     if (timeChangedShowCnt >= 0 && (timeChangedShowCnt % 64) > 32)
       Letter.drawString(timeChangedMsg, 250, 24, 7, Letter.Direction.TO_RIGHT, 1);
+    Screen.unanchor();
+    Screen.anchor(-1, 1);
     Letter.drawString("LEVEL", 20, 410, 8, Letter.Direction.TO_RIGHT, 1);
     Letter.drawNum(cast(int) stageManager.level, 135, 410, 8);
+    Screen.unanchor();
     if (ship.isGameOver)
       Letter.drawString("GAME OVER", 140, 180, 20);
     if (pauseCnt > 0 && (pauseCnt % 64) < 32)
@@ -629,8 +635,13 @@ public class TitleState: GameState {
       float rcr = titleManager.replayChangeRatio * 2.4f;
       if (rcr > 1)
         rcr = 1;
+      // From the left edge of the screen to where the menu begins, 160 layout units from the
+      // right edge (three quarters of the width on a 4:3 screen), and on to the right edge as
+      // the menu gives way to the replay (rcr = 1).
+      float layoutWidth = Screen.width + Screen.marginX * 2;
+      float right = layoutWidth - 160 * (1 - rcr);
       glViewport(Screen.screenStartX, Screen.screenStartY,
-                 cast(int) (Screen.screenWidth / 4 * (3 + rcr)),
+                 cast(int) (Screen.screenWidth * right / layoutWidth),
                  Screen.screenHeight);
       glEnable(GL_CULL_FACE);
       tunnel.draw();
@@ -649,14 +660,7 @@ public class TitleState: GameState {
       shots.draw();
     }
     glViewport(Screen.screenStartX, Screen.screenStartY, Screen.screenWidth, Screen.screenHeight);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glFrustum(-Screen.nearPlane,
-              Screen.nearPlane,
-              -Screen.nearPlane * cast(GLfloat) Screen.height / cast(GLfloat) Screen.width,
-              Screen.nearPlane * cast(GLfloat) Screen.height / cast(GLfloat) Screen.width,
-              0.1f, Screen.farPlane);
-    glMatrixMode(GL_MODELVIEW);
+    Screen.setFrustum(Screen.nearPlane);
     titleManager.draw();
   }
 

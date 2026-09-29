@@ -439,15 +439,7 @@ public class Ship: BulletTarget {
       ly = lp3.y;
       lz = lp3.z;
       deg = camera.deg;
-      glMatrixMode(GL_PROJECTION);
-      glLoadIdentity();
-      float np = Screen.nearPlane * camera.zoom;
-      glFrustum(-np,
-                np,
-                -np * cast(GLfloat) Screen.height / cast(GLfloat) Screen.width,
-                np * cast(GLfloat) Screen.height / cast(GLfloat) Screen.width,
-                0.1f, Screen.farPlane);
-      glMatrixMode(GL_MODELVIEW);
+      Screen.setFrustum(Screen.nearPlane * camera.zoom);
     }
     if (screenShakeCnt > 0) {
       float mx = rand.nextSignedFloat(screenShakeIntense * (screenShakeCnt + 6));
@@ -594,11 +586,15 @@ public class Ship: BulletTarget {
   }
 
   public void drawFront() {
+    Screen.anchor(1, 1);
     Letter.drawNum(cast(int) (speed * 2500), 490, 420, 20);
     Letter.drawString("KM/H", 540, 445, 12);
+    Screen.unanchor();
+    Screen.anchor(-1, 1);
     Letter.drawNum(rank, 150, 432, 16);
     Letter.drawString("/", 185, 448, 10);
     Letter.drawNum(zoneEndRank - rank, 250, 448, 10);
+    Screen.unanchor();
     /*Letter.drawString("LAP", 20, 388, 8, Letter.Direction.TO_RIGHT, 1);
     Letter.drawNum(lap, 120, 388, 8);
     Letter.drawString(".", 130, 386, 8);

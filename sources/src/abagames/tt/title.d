@@ -183,18 +183,33 @@ public class TitleManager {
     float rcr = _replayChangeRatio * 2;
     if (rcr > 1)
       rcr = 1;
+    // The menu, the panel behind it and the torus keep their place relative to the right edge
+    // of the screen; the panel covers the whole height.
+    float mx = Screen.marginX, my = Screen.marginY;
+    float left = 450 + mx + (640 - 450) * rcr;
     glBegin(GL_QUADS);
-    glVertex3f(450 + (640 - 450) * rcr, 0, 0);
-    glVertex3f(640, 0, 0);
-    glVertex3f(640, 480, 0);
-    glVertex3f(450 + (640 - 450) * rcr, 480, 0);
+    glVertex3f(left, -my, 0);
+    glVertex3f(640 + mx, -my, 0);
+    glVertex3f(640 + mx, 480 + my, 0);
+    glVertex3f(left, 480 + my, 0);
     glEnd();
     glEnable(GL_BLEND);
     Screen.viewPerspective();
     glPushMatrix();
     gluLookAt(0, 0, -1, 0, 0, 0, 0, 1, 0);
     glPushMatrix();
-    glTranslatef(3 - _replayChangeRatio * 2.4f, 1.8f, 3.5f - _replayChangeRatio * 1.5f);
+    // On a wider screen the torus keeps its right side behind the menu and is stretched
+    // sideways, so that its opening still reaches past the left edge of the screen and no mask
+    // shows there. Its height and its depth stay as they are. The eye is at z = -1 and looks
+    // along +z, which puts the right of the screen at -x; at the torus (4.5 from the eye) half
+    // a 4:3 screen is 4.5 wide. The right side is at x - 5 (the torus' radius), the left side
+    // at x + 5, 3.5 beyond the screen's edge on 4:3:
+    //   x - 5 * grow = 3 - shift - 5 and x + 5 * grow = 4.5 * extendX + 3.5
+    float shift = mx / 320 * 4.5f;
+    float grow = (9 * Screen.extendX + 1) / 10;
+    glTranslatef(3 - _replayChangeRatio * 2.4f - shift - 5 + 5 * grow, 1.8f,
+                 3.5f - _replayChangeRatio * 1.5f);
+    glScalef(grow, 1, 1);
     glRotatef(30, 1, 0, 0);
     const float cntSin = sin(cnt * 0.005f);
     glRotatef(cntSin * 12, 0, 1, 0);
@@ -211,6 +226,7 @@ public class TitleManager {
   public void drawFront() {
     if (_replayChangeRatio > 0)
       return;
+    Screen.anchor(1, 0);
     glPushMatrix();
     glTranslatef(508, 400, 0);
     glRotatef(-20, 0, 0, 1);
@@ -272,6 +288,7 @@ public class TitleManager {
     calcCursorPos(cx, cy, grade, level);
     const float cntSin = sin(cnt * 0.1f);
     drawCursorRing(cx, cy, 18 + cntSin * 3);
+    Screen.unanchor();
   }
 
   private void calcCursorPos(ref float x, ref float y, int gd, int lv) {

@@ -25,6 +25,10 @@ public class Screen3D: Screen {
   static int screenHeight = 480;
   static int screenStartX = 0;
   static int screenStartY = 0;
+  // How far the view reaches beyond the width x height layout (1 = not at all), and the same
+  // as margins in layout units on each side.
+  static float extendX = 1, extendY = 1;
+  static float marginX = 0, marginY = 0;
   static string name = "";
   static SDL_Window* window;
   static SDL_GLContext context;
@@ -76,34 +80,40 @@ public class Screen3D: Screen {
 
   // Reset viewport when the screen is resized.
 
+  // The picture fills the screen. The game is laid out for width x height (640x480, 4:3): on
+  // a wider screen the view is extended to the sides, on a narrower one (3:2 is wider, 1:1 and
+  // 5:4 are narrower) upwards and downwards, so the original view is always inside.
+
   public void screenResized() {
     static if (SDL_VERSION_ATLEAST(2, 0, 1)) {
       SDL_version linked;
       SDL_GetVersion(&linked);
-      if (SDL_version(linked.major, linked.minor, linked.patch) >= SDL_version(2, 0, 1)) {
-        int glwidth, glheight;
-        SDL_GL_GetDrawableSize(window, &glwidth, &glheight);
-        if ((cast(float)(glwidth)) / width <= (cast(float)(glheight)) / height) {
-          screenStartX = 0;
-          screenWidth = glwidth;
-          screenHeight = (glwidth * height) / width;
-          screenStartY = (glheight - screenHeight) / 2;
-        } else {
-          screenStartY = 0;
-          screenHeight = glheight;
-          screenWidth = (glheight * width) / height;
-          screenStartX = (glwidth - screenWidth) / 2;
-        }
-      }
+      if (SDL_version(linked.major, linked.minor, linked.patch) >= SDL_version(2, 0, 1))
+        SDL_GL_GetDrawableSize(window, &screenWidth, &screenHeight);
     }
+    screenStartX = screenStartY = 0;
+    float ratio = (cast(float) screenWidth * height) / (cast(float) screenHeight * width);
+    if (ratio >= 1) {
+      extendX = ratio;
+      extendY = 1;
+    } else {
+      extendX = 1;
+      extendY = 1 / ratio;
+    }
+    marginX = width * (extendX - 1) / 2;
+    marginY = height * (extendY - 1) / 2;
     glViewport(screenStartX, screenStartY, screenWidth, screenHeight);
+    setFrustum(nearPlane);
+  }
+
+  // The perspective projection with the near plane's half width np.
+  public static void setFrustum(float np) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    //gluPerspective(45.0f, cast(GLfloat) width / cast(GLfloat) height, nearPlane, farPlane);
-    glFrustum(-nearPlane,
-	      nearPlane,
-	      -nearPlane * cast(GLfloat) height / cast(GLfloat) width,
-	      nearPlane * cast(GLfloat) height / cast(GLfloat) width,
+    glFrustum(-np * extendX,
+              np * extendX,
+              -np * cast(GLfloat) height / cast(GLfloat) width * extendY,
+              np * cast(GLfloat) height / cast(GLfloat) width * extendY,
               0.1f, farPlane);
     glMatrixMode(GL_MODELVIEW);
   }
