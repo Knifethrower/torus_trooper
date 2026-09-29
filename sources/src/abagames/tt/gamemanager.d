@@ -5,8 +5,8 @@
  */
 module abagames.tt.gamemanager;
 
-private import std.math;
-private import opengl;
+private import abagames.util.math;
+private import abagames.util.sdl.gl;
 private import bindbc.sdl;
 private import bulletml;
 private import abagames.util.vector;

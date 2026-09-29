@@ -5,8 +5,8 @@
  */
 module abagames.tt.tunnel;
 
-private import opengl;
-private import std.math;
+private import abagames.util.sdl.gl;
+private import abagames.util.math;
 private import abagames.util.vector;
 private import abagames.util.rand;
 private import abagames.util.sdl.displaylist;
@@ -298,7 +298,7 @@ public class Tunnel {
       idx = cast(int)(slice.length - 2);
       ofs = 0.99;
     }
-    if (std.math.isNaN(ofs) || ofs < 0)
+    if (abagames.util.math.isNaN(ofs) || ofs < 0)
       ofs = 0;
     else if (ofs >= 1)
       ofs = 0.99;
@@ -320,7 +320,7 @@ public class Tunnel {
       idx = cast(int)(sliceBackward.length - 2);
       ofs = 0.99;
     }
-    if (std.math.isNaN(ofs) || ofs < 0)
+    if (abagames.util.math.isNaN(ofs) || ofs < 0)
       ofs = 0;
     else if (ofs >= 1)
       ofs = 0.99;

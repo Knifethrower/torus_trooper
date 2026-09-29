@@ -6,7 +6,7 @@
 module abagames.tt.stagemanager;
 
 private import std.string;
-private import std.math;
+private import abagames.util.math;
 private import bulletml;
 private import abagames.util.vector;
 private import abagames.util.rand;

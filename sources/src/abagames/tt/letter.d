@@ -5,8 +5,8 @@
  */
 module abagames.tt.letter;
 
-private import std.math;
-private import opengl;
+private import abagames.util.math;
+private import abagames.util.sdl.gl;
 private import abagames.util.sdl.displaylist;
 private import abagames.tt.screen;
 

@@ -3,7 +3,7 @@
  */
 module abagames.util.sdl.vertexbatch;
 
-private import opengl;
+private import abagames.util.sdl.gl;
 private import abagames.util.vector;
 private import abagames.util.sdl.screen3d;
 
@@ -56,15 +56,8 @@ public class VertexBatch {
   public void flush() {
     if (num <= 0)
       return;
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 0, vert.ptr);
-    glColorPointer(4, GL_FLOAT, 0, col.ptr);
-    glDrawArrays(mode, 0, num);
-    glDisableClientState(GL_COLOR_ARRAY);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    // The current color is undefined after drawing with a color array; leave it where
-    // glBegin/glEnd drawing would have left it.
+    drawArrays(mode, vert.ptr, col.ptr, num);
+    // Leave the current color where glBegin/glEnd drawing would have left it.
     glColor4f(r, g, b, a);
     num = 0;
   }

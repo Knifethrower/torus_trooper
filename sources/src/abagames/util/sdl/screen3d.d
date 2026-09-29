@@ -8,7 +8,7 @@ module abagames.util.sdl.screen3d;
 private import std.string;
 private import std.conv;
 private import bindbc.sdl;
-private import opengl;
+private import abagames.util.sdl.gl;
 private import abagames.util.vector;
 private import abagames.util.sdl.screen;
 private import abagames.util.sdl.sdlexception;
@@ -42,7 +42,10 @@ public class Screen3D: Screen {
       throw new SDLInitFailedException(
         "Unable to initialize SDL: " ~ to!string(SDL_GetError()));
     }
-    // Create an OpenGL screen.
+    // Create an OpenGL ES 2 screen (see abagames.util.sdl.gl).
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     uint videoFlags;
       videoFlags = SDL_WINDOW_OPENGL;
     if (windowMode) {
@@ -62,6 +65,7 @@ public class Screen3D: Screen {
       throw new SDLInitFailedException(
         "Unable to initialize OpenGL context: " ~ to!string(SDL_GetError()));
     }
+    initGL();
     SDL_GetWindowSize(window, &screenWidth, &screenHeight);
     glViewport(screenStartX, screenStartY, screenWidth, screenHeight);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -113,11 +117,13 @@ public class Screen3D: Screen {
   public override void closeSDL() {
     close();
     SDL_ShowCursor(SDL_ENABLE);
+    closeGL();
     SDL_GL_DeleteContext(context);
     SDL_DestroyWindow(window);
   }
 
   public override void flip() {
+    flushGL();
     handleError();
     SDL_GL_SwapWindow(window);
   }

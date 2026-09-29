@@ -5,7 +5,7 @@
  */
 module abagames.tt.barrage;
 
-private import std.math;
+private import abagames.util.math;
 private import std.string;
 private import std.path;
 private import std.file;

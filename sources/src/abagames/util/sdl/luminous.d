@@ -5,10 +5,10 @@
  */
 module abagames.util.sdl.luminous;
 
-private import std.math;
+private import abagames.util.math;
 private import std.string;
 private import core.stdc.string;
-private import opengl;
+private import abagames.util.sdl.gl;
 private import abagames.util.actor;
 private import abagames.util.sdl.screen3d;
 

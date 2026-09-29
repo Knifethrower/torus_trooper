@@ -5,7 +5,7 @@
  */
 module abagames.util.bulletml.bullet;
 
-private import std.math;
+private import abagames.util.math;
 private import bulletml;
 private import abagames.util.vector;
 private import abagames.util.rand;
@@ -121,11 +121,11 @@ const float VEL_SDM_SS_RATIO = 10.0 / 62;
 public:
 
 float rtod(float a) {
-  return a * 180 / std.math.PI;
+  return a * 180 / abagames.util.math.PI;
 }
 
 float dtor(float a) {
-  return a * std.math.PI / 180;
+  return a * abagames.util.math.PI / 180;
 }
 
 extern (C) {
@@ -135,7 +135,7 @@ extern (C) {
   double getAimDirection_(BulletMLRunner* r) {
     Vector b = Bullet.now.pos;
     Vector t = Bullet.target;
-    return rtod(std.math.atan2(t.x - b.x, t.y - b.y));
+    return rtod(abagames.util.math.atan2(t.x - b.x, t.y - b.y));
   }
   double getBulletSpeed_(BulletMLRunner* r) {
     return Bullet.now.speed * VEL_SS_SDM_RATIO;

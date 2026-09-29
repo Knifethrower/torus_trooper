@@ -34,4 +34,4 @@ cd src/abagames/tt
 find . -maxdepth 1 -name \*.d -type f -exec gdc $FLAGS -I../.. \{\} \;
 cd ../../..
 
-gdc -o Torus_Trooper -s -Wl,--gc-sections -static-libphobos import/*.o* import/sdl/*.o* import/bindbc/sdl/*.o* src/abagames/util/*.o* src/abagames/util/bulletml/*.o* src/abagames/util/sdl/*.o* src/abagames/tt/*.o* -L${BULLETML:-../bulletml}/src -Wl,--as-needed -Wl,-Bstatic -lbulletml -lGLU -Wl,-Bdynamic -lstdc++ -lGL -lSDL2_mixer -lSDL2
+gdc -o Torus_Trooper -s -Wl,--gc-sections -static-libphobos import/*.o* import/sdl/*.o* import/bindbc/sdl/*.o* src/abagames/util/*.o* src/abagames/util/bulletml/*.o* src/abagames/util/sdl/*.o* src/abagames/tt/*.o* -L${BULLETML:-../bulletml}/src -Wl,--as-needed -Wl,-Bstatic -lbulletml -Wl,-Bdynamic -lstdc++ -lSDL2_mixer -lSDL2

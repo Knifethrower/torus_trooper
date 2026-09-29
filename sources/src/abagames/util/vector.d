@@ -5,7 +5,7 @@
  */
 module abagames.util.vector;
 
-private import std.math;
+private import abagames.util.math;
 private import std.string;
 private import std.conv;
 

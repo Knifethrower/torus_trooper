@@ -5,7 +5,7 @@
  */
 module abagames.tt.camera;
 
-private import std.math;
+private import abagames.util.math;
 private import abagames.util.vector;
 private import abagames.util.rand;
 private import abagames.tt.ship;

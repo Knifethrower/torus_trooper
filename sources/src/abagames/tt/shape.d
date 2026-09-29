@@ -6,8 +6,8 @@
 module abagames.tt.shape;
 
 private import std.string;
-private import std.math;
-private import opengl;
+private import abagames.util.math;
+private import abagames.util.sdl.gl;
 private import abagames.util.vector;
 private import abagames.util.rand;
 private import abagames.util.sdl.screen3d;

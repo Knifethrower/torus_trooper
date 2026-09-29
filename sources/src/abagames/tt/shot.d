@@ -5,10 +5,10 @@
  */
 module abagames.tt.shot;
 
-private import std.math;
+private import abagames.util.math;
 private import std.string;
 private import std.conv;
-private import opengl;
+private import abagames.util.sdl.gl;
 private import abagames.util.actor;
 private import abagames.util.vector;
 private import abagames.util.rand;

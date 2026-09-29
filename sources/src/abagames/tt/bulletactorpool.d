@@ -5,7 +5,7 @@
  */
 module abagames.tt.bulletactorpool;
 
-private import std.math;
+private import abagames.util.math;
 private import bulletml;
 private import abagames.util.actor;
 private import abagames.util.vector;

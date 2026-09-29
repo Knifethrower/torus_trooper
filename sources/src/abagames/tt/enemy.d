@@ -5,8 +5,8 @@
  */
 module abagames.tt.enemy;
 
-private import std.math;
-private import opengl;
+private import abagames.util.math;
+private import abagames.util.sdl.gl;
 private import bulletml;
 private import abagames.util.vector;
 private import abagames.util.actor;
